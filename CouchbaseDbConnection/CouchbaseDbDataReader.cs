@@ -3,10 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dynamitey;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace CouchbaseDbConnection
 {
@@ -72,7 +75,11 @@ namespace CouchbaseDbConnection
 
         public override Type GetFieldType(int ordinal)
         {
-            var type = Dynamic.InvokeGet(_dataEnumerator.Current, _names[ordinal])?.Value.GetType();
+            var get = Dynamic.InvokeGet(_dataEnumerator.Current, _names[ordinal]);
+            var value = get?.Value;
+            if (value == null)
+                return typeof(object);
+            var type = value.GetType();
             return type;
         }
 
@@ -133,6 +140,12 @@ namespace CouchbaseDbConnection
         {
             var obj = _dataEnumerator.Current;
             var val = Dynamic.InvokeGet(obj, _names[ordinal]);
+            var value = val.Value;
+            if (value == null)
+            {
+                // TODO (Dapper will attempt to cast this to whatever class later, but I don't know that class here)
+                return val;
+            }
             return val.Value; // "val" is a JToken, so use Value to get the underlying value
         }
 

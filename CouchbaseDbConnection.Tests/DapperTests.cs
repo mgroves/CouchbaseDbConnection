@@ -2,9 +2,12 @@
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Couchbase;
 using Dapper;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace CouchbaseDbConnection.Tests
@@ -99,6 +102,20 @@ namespace CouchbaseDbConnection.Tests
 
             Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
         }
+
+        [Test]
+        public async Task DapperWithNestedObject()
+        {
+            //SqlMapper.AddTypeHandler(new NestedObjectTypeHandler());
+            var result = await _db.QueryAsync<UserProfileWithNested>("SELECT f.*, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested FROM userprofile._default._default f WHERE f.name == 'Matt'");
+
+            var list = result.ToList();
+
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
+            Assert.That(list[0].MyNested["foo"].Value<string>(), Is.EqualTo("bar"));
+            Assert.That(list[0].MyNestedCsharp.Foo, Is.EqualTo("bar"));
+        }
     }
 
     public class UserProfile
@@ -106,4 +123,33 @@ namespace CouchbaseDbConnection.Tests
         public string Name { get; set; }
         public int ShoeSize { get; set; }
     }
+
+    public class UserProfileWithNested
+    {
+        public string Name { get; set; }
+        public int ShoeSize { get; set; }
+        public JObject MyNested { get; set; }
+
+        public NestedObject MyNestedCsharp => MyNested.ToObject<NestedObject>();
+    }
+
+    public class NestedObject
+    {
+        public string Foo { get; set; }
+        public string Baz { get; set; }
+    }
+
+    // This approach can be used instead of JObject for nested objects
+    // public class NestedObjectTypeHandler : SqlMapper.TypeHandler<NestedObject>
+    // {
+    //     public override NestedObject Parse(object value)
+    //     {
+    //         return JsonConvert.DeserializeObject<NestedObject>(value.ToString());
+    //     }
+    //
+    //     public override void SetValue(IDbDataParameter parameter, NestedObject value)
+    //     {
+    //         parameter.Value = JsonConvert.SerializeObject(value);
+    //     }
+    // }
 }
