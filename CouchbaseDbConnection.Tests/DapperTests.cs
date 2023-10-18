@@ -73,13 +73,27 @@ namespace CouchbaseDbConnection.Tests
         }
 
         [Test]
-        public async Task DapperTransaction()
+        public async Task DapperExecuteScalar()
         {
-            using (var transaction = _db.BeginTransaction())
-            {
-                await _db.ExecuteAsync("");
-                await _db.ExecuteAsync("");
-            }
+            var countUsers = await _db.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM userprofile._default._default");
+
+            Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test]
+        public async Task DapperExecuteScalarValue()
+        {
+            var countUsers = await _db.ExecuteScalarAsync<int>(@"SELECT VALUE COUNT(*) FROM userprofile._default._default");
+
+            Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test]
+        public async Task DapperExecuteScalarRaw()
+        {
+            var countUsers = await _db.ExecuteScalarAsync<int>(@"SELECT RAW COUNT(*) FROM userprofile._default._default");
+
+            Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
         }
     }
 

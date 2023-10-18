@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Couchbase;
 using Couchbase.Query;
+using Dynamitey;
+using Dynamitey.DynamicObjects;
 
 namespace CouchbaseDbConnection
 {
@@ -44,6 +48,35 @@ namespace CouchbaseDbConnection
             throw new NotImplementedException();
         }
 
+        public override async Task<object> ExecuteScalarAsync(CancellationToken cancellationToken)
+        {
+            var query = await Connection.SqlPlusPlusAsync(CommandText, DbParameterCollection);
+            var firstResult = await query.FirstOrDefaultAsync(cancellationToken);
+
+            // no results, return null
+            if (firstResult == null)
+                return null;
+
+            // if its a primitive (e.g. SELECT VALUE or SELECT RAW), return that
+            var obj = (object)firstResult;
+            if (obj.GetType().IsPrimitive)
+                return obj;
+
+            // otherwise, scalar means return the "first value" from the first result
+            // there really isn't a "first" or "ordinal" value in JSON, so let's just go alphabetically
+            // hopefully developers are only selecting one field anyway for ExecuteScalar
+            var memberNames = Dynamic.GetMemberNames(firstResult, dynamicOnly: true);
+            List<string> memberNamesList = memberNames;
+            var firstPropNameAlphabetically = memberNamesList
+                .OrderBy(n => n)
+                .FirstOrDefault();
+
+            var firstValue = Dynamic.InvokeGet(firstResult, firstPropNameAlphabetically);
+
+            return firstValue;
+        }
+
+        [Obsolete("Don't use sync")]
         public override object ExecuteScalar()
         {
             throw new NotImplementedException();
@@ -98,14 +131,10 @@ namespace CouchbaseDbConnection
                 throw new InvalidOperationException("The connection is not open.");
             }
 
-            // Execute your Couchbase-specific command here and get the results
-            // For example, you might use the Couchbase SDK to execute a query
-            // and obtain the result set.
             var query = await Connection.SqlPlusPlusAsync(CommandText, DbParameterCollection);
             var enumerator = query.GetAsyncEnumerator(cancellationToken);
             await enumerator.MoveNextAsync(); // "preload" the first row, since Couchbase has no schema data
 
-            // Create a custom CouchbaseDbDataReader or use an existing one to wrap the results
             var couchbaseDataReader = new CouchbaseDbDataReader(enumerator, behavior);
 
             return couchbaseDataReader;
