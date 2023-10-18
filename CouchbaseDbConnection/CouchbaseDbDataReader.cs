@@ -14,7 +14,7 @@ namespace CouchbaseDbConnection
     {
         //private readonly IAsyncEnumerable<dynamic> _data;
         private readonly CommandBehavior _behavior;
-        private readonly IAsyncEnumerator<dynamic> _dataEnumerator;
+        private readonly IAsyncEnumerator<object> _dataEnumerator;
         private bool _preloadProcessed;
         private List<string>? _names;
 

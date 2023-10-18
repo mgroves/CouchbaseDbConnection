@@ -19,7 +19,11 @@ namespace CouchbaseDbConnection.Tests
         [OneTimeSetUp]
         public async Task OneTimeSetUp()
         {
-            _cluster = await Cluster.ConnectAsync("couchbase://localhost", "Administrator", "password");
+            _cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
+            {
+                options.UserName = "Administrator";
+                options.Password = "password";
+            });
             _db = new CouchbaseDbConnection(_cluster);
             _rand = new Random();
         }
@@ -33,12 +37,12 @@ namespace CouchbaseDbConnection.Tests
         [Test]
         public async Task DapperSelect()
         {
-            var result = await _db.QueryAsync<UserProfile>("SELECT f.* FROM userprofile._default._default f LIMIT 2");
+            var result = await _db.QueryAsync<UserProfile>("SELECT f.* FROM userprofile._default._default f WHERE f.name == 'Matt' LIMIT 2");
 
             var list = result.ToList();
 
-            Assert.That(list.Count, Is.EqualTo(2));
-            Assert.That(list[0].name, Is.EqualTo("Matt"));
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
         }
 
         [Test]
@@ -51,7 +55,7 @@ namespace CouchbaseDbConnection.Tests
             var list = result.ToList();
 
             Assert.That(list.Count, Is.EqualTo(1));
-            Assert.That(list[0].name, Is.EqualTo("Matt"));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
         }
 
         [Test]
@@ -60,14 +64,14 @@ namespace CouchbaseDbConnection.Tests
             var key = Path.GetRandomFileName();
             var user = new UserProfile
             {
-                name = $"{Path.GetRandomFileName()} {Path.GetRandomFileName()}",
-                shoeSize = _rand.Next(1, 17)
+                Name = $"{Path.GetRandomFileName()} {Path.GetRandomFileName()}",
+                ShoeSize = _rand.Next(1, 17)
             };
 
             var numMutations = await _db.ExecuteAsync(@"INSERT INTO userprofile._default._default (KEY,VALUE) VALUES ($key, {
                                    ""name"" : $name, 
                                    ""shoeSize"" : $shoeSize })",
-                new { key = key, name = user.name, shoeSize = user.shoeSize});
+                new { key = key, name = user.Name, shoeSize = user.ShoeSize});
 
             Assert.That(numMutations, Is.EqualTo(1));
         }
@@ -99,7 +103,7 @@ namespace CouchbaseDbConnection.Tests
 
     public class UserProfile
     {
-        public string name { get; set; }
-        public int shoeSize { get; set; }
+        public string Name { get; set; }
+        public int ShoeSize { get; set; }
     }
 }
