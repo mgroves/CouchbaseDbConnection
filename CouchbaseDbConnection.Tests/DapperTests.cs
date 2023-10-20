@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Couchbase;
 using Dapper;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -127,6 +125,19 @@ namespace CouchbaseDbConnection.Tests
         }
 
         [Test]
+        public async Task DapperWithNested()
+        {
+            //SqlMapper.AddTypeHandler(new NestedObjectTypeHandler());
+            var result = await _db.QueryAsync<UserProfileWithNested>("SELECT 'Matt' AS name, 13 AS shoeSize, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested");
+
+            var list = result.ToList();
+
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
+            Assert.That(list[0].MyNested.Foo, Is.EqualTo("bar"));
+        }
+
+        [Test]
         public async Task DapperWithNoResults()
         {
             var result = await _db.QueryAsync<UserProfile>("SELECT f.* FROM userprofile._default._default f WHERE 1 == 2");
@@ -175,6 +186,26 @@ namespace CouchbaseDbConnection.Tests
             Assert.That(list[0].AnArray.Count, Is.EqualTo(2));
             Assert.That(list[0].AnArrayCsharp[1].Foo, Is.EqualTo("bar2"));
         }
+
+        [Test]
+        public async Task WhatAboutDates()
+        {
+            var result = await _db.QueryAsync<SomeDates>(@"SELECT 1697827298 AS dt1, '2010-10-08 18:18:18' AS dt2, 'Fri, 20 Oct 2023 18:41:38 GMT' AS dt3, '2011-11-08 08:09:10' AS dt4offset");
+
+            var list = result.ToList();
+
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Dt2, Is.EqualTo(DateTime.Parse("2010-10-08 18:18:18")));
+            Assert.That(list[0].Dt3, Is.EqualTo(DateTime.Parse("Fri, 20 Oct 2023 18:41:38 GMT")));
+        }
+    }
+
+    public class SomeDates
+    {
+        //public DateTime Dt1 { get; set; }
+        public DateTime Dt2 { get; set; }
+        public DateTime Dt3 { get; set; }
+        //public DateTimeOffset Dt4Offset { get; set; }
     }
 
     public class UserProfile
@@ -212,6 +243,13 @@ namespace CouchbaseDbConnection.Tests
         public JObject MyNested { get; set; }
 
         public NestedObject MyNestedCsharp => MyNested.ToObject<NestedObject>();
+    }
+
+    public class UserProfileWithNested
+    {
+        public string Name { get; set; }
+        public int ShoeSize { get; set; }
+        public NestedObject MyNested { get; set; }
     }
 
     public class NestedObject

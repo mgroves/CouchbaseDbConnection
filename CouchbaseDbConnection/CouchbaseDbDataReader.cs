@@ -13,13 +13,12 @@ namespace CouchbaseDbConnection
 {
     public class CouchbaseDbDataReader : DbDataReader
     {
-        //private readonly IAsyncEnumerable<dynamic> _data;
         private readonly CommandBehavior _behavior;
         private readonly IAsyncEnumerator<object> _dataEnumerator;
         private bool _preloadProcessed;
         private List<string>? _names;
 
-        public CouchbaseDbDataReader(IAsyncEnumerator<dynamic> dataEnumerator, CommandBehavior behavior)
+        public CouchbaseDbDataReader(IAsyncEnumerator<object> dataEnumerator, CommandBehavior behavior)
         {
             _dataEnumerator = dataEnumerator;
             _behavior = behavior;
@@ -184,7 +183,8 @@ namespace CouchbaseDbConnection
 
             if (getValue is JObject)
             {
-                return getValue;
+                JObject jobj = getValue;
+                return jobj.ToObject<object>();
             }
 
             if (getValue is JToken)
