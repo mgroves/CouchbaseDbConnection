@@ -41,7 +41,7 @@ namespace CouchbaseDbConnection.Tests
         [Test]
         public async Task DapperSelect()
         {
-            var result = await _db.QueryAsync<UserProfile>("SELECT f.* FROM userprofile._default._default f WHERE f.name == 'Matt' LIMIT 2");
+            var result = await _db.QueryAsync<UserProfile>("SELECT 'Matt' AS name, 13 AS shoeSize");
 
             var list = result.ToList();
 
@@ -52,6 +52,8 @@ namespace CouchbaseDbConnection.Tests
         [Test]
         public async Task DapperSelectWithParameters()
         {
+            // TODO: must be data in collection for this test to work
+
             var result = await _db.QueryAsync<UserProfile>(
                 "SELECT f.* FROM userprofile._default._default f WHERE f.name == $name",
                 new { name = "Matt"});
@@ -83,6 +85,8 @@ namespace CouchbaseDbConnection.Tests
         [Test]
         public async Task DapperExecuteScalar()
         {
+            // TODO: must be data in collection for this test to work
+
             var countUsers = await _db.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM userprofile._default._default");
 
             Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
@@ -91,6 +95,8 @@ namespace CouchbaseDbConnection.Tests
         [Test]
         public async Task DapperExecuteScalarValue()
         {
+            // TODO: must be data in collection for this test to work
+
             var countUsers = await _db.ExecuteScalarAsync<int>(@"SELECT VALUE COUNT(*) FROM userprofile._default._default");
 
             Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
@@ -99,6 +105,8 @@ namespace CouchbaseDbConnection.Tests
         [Test]
         public async Task DapperExecuteScalarRaw()
         {
+            // TODO: must be data in collection for this test to work
+
             var countUsers = await _db.ExecuteScalarAsync<int>(@"SELECT RAW COUNT(*) FROM userprofile._default._default");
 
             Assert.That(countUsers, Is.GreaterThanOrEqualTo(1));
@@ -108,7 +116,7 @@ namespace CouchbaseDbConnection.Tests
         public async Task DapperWithNestedJObject()
         {
             //SqlMapper.AddTypeHandler(new NestedObjectTypeHandler());
-            var result = await _db.QueryAsync<UserProfileWithJObjectNested>("SELECT f.*, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested FROM userprofile._default._default f WHERE f.name == 'Matt'");
+            var result = await _db.QueryAsync<UserProfileWithJObjectNested>("SELECT 'Matt' AS name, 13 AS shoeSize, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested");
 
             var list = result.ToList();
 

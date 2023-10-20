@@ -3,12 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dynamitey;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace CouchbaseDbConnection
@@ -75,25 +73,40 @@ namespace CouchbaseDbConnection
 
         public override Type GetFieldType(int ordinal)
         {
-            var get = Dynamic.InvokeGet(_dataEnumerator.Current, _names[ordinal]);
-            if (get is JArray)
+            var getField = Dynamic.InvokeGet(_dataEnumerator.Current, _names[ordinal]);
+            if (getField is JArray)
             {
-                JArray array = get;
+                JArray array = getField;
                 var arrayType = array[0].Type;
-                if(arrayType == JTokenType.Integer)
+
+                // array of primitive types
+                if (arrayType == JTokenType.Integer)
                     return typeof(List<int>);
                 if (arrayType == JTokenType.String)
                     return typeof(List<string>);
                 if (arrayType == JTokenType.Boolean)
                     return typeof(List<bool>);
+                
+                // array of unknown types
                 if (arrayType == JTokenType.Object)
                     return typeof(List<JObject>);
             }
-            var value = get?.Value;
-            if (value == null)
-                return typeof(object);
-            var type = value.GetType();
-            return type;
+
+            if (getField is JObject)
+            {
+                // object of unknown type
+                return typeof(JObject);
+            }
+
+            if (getField is JToken)
+            {
+                // primitive type
+                var value = getField?.Value;
+                var type = value.GetType();
+                return type;
+            }
+
+            throw new ArgumentException($"Not sure how to get type from object {getField}");
         }
 
         public override float GetFloat(int ordinal)
@@ -152,11 +165,11 @@ namespace CouchbaseDbConnection
         public override object GetValue(int ordinal)
         {
             var obj = _dataEnumerator.Current;
-            var val = Dynamic.InvokeGet(obj, _names[ordinal]);
+            var getValue = Dynamic.InvokeGet(obj, _names[ordinal]);
 
-            if (val is JArray)
+            if (getValue is JArray)
             {
-                JArray array = val;
+                JArray array = getValue;
                 var arrayType = array[0].Type;
                 if (arrayType == JTokenType.Integer)
                     return array.ToObject<List<int>>();
@@ -169,13 +182,17 @@ namespace CouchbaseDbConnection
                 return "";
             }
 
-            var value = val.Value;
-            if (value == null)
+            if (getValue is JObject)
             {
-                // TODO (Dapper will attempt to cast this to whatever class later, but I don't know that class here)
-                return val;
+                return getValue;
             }
-            return val.Value; // "val" is a JToken, so use Value to get the underlying value
+
+            if (getValue is JToken)
+            {
+                return getValue.Value; // "val" is a JToken, so use Value to get the underlying value
+            }
+
+            throw new ArgumentException($"Not sure how to get value from object {getValue}");
         }
 
         public override int GetValues(object[] values)
