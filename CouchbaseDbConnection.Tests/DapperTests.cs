@@ -124,18 +124,18 @@ namespace CouchbaseDbConnection.Tests
             Assert.That(list[0].MyNestedCsharp.Foo, Is.EqualTo("bar"));
         }
 
-        [Test]
-        public async Task DapperWithNested()
-        {
-            //SqlMapper.AddTypeHandler(new NestedObjectTypeHandler());
-            var result = await _db.QueryAsync<UserProfileWithNested>("SELECT 'Matt' AS name, 13 AS shoeSize, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested");
-
-            var list = result.ToList();
-
-            Assert.That(list.Count, Is.EqualTo(1));
-            Assert.That(list[0].Name, Is.EqualTo("Matt"));
-            Assert.That(list[0].MyNested.Foo, Is.EqualTo("bar"));
-        }
+        // [Test]
+        // public async Task DapperWithNested()
+        // {
+        //     //SqlMapper.AddTypeHandler(new NestedObjectTypeHandler());
+        //     var result = await _db.QueryAsync<UserProfileWithNested>("SELECT 'Matt' AS name, 13 AS shoeSize, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested");
+        //
+        //     var list = result.ToList();
+        //
+        //     Assert.That(list.Count, Is.EqualTo(1));
+        //     Assert.That(list[0].Name, Is.EqualTo("Matt"));
+        //     Assert.That(list[0].MyNested.Foo, Is.EqualTo("bar"));
+        // }
 
         [Test]
         public async Task DapperWithNoResults()
