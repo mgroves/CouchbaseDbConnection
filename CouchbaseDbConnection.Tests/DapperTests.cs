@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -104,10 +105,10 @@ namespace CouchbaseDbConnection.Tests
         }
 
         [Test]
-        public async Task DapperWithNestedObject()
+        public async Task DapperWithNestedJObject()
         {
             //SqlMapper.AddTypeHandler(new NestedObjectTypeHandler());
-            var result = await _db.QueryAsync<UserProfileWithNested>("SELECT f.*, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested FROM userprofile._default._default f WHERE f.name == 'Matt'");
+            var result = await _db.QueryAsync<UserProfileWithJObjectNested>("SELECT f.*, { \"foo\" : \"bar\", \"baz\" : \"qux\"} AS MyNested FROM userprofile._default._default f WHERE f.name == 'Matt'");
 
             var list = result.ToList();
 
@@ -115,6 +116,56 @@ namespace CouchbaseDbConnection.Tests
             Assert.That(list[0].Name, Is.EqualTo("Matt"));
             Assert.That(list[0].MyNested["foo"].Value<string>(), Is.EqualTo("bar"));
             Assert.That(list[0].MyNestedCsharp.Foo, Is.EqualTo("bar"));
+        }
+
+        [Test]
+        public async Task DapperWithNoResults()
+        {
+            var result = await _db.QueryAsync<UserProfile>("SELECT f.* FROM userprofile._default._default f WHERE 1 == 2");
+
+            var list = result.ToList();
+
+            Assert.That(list.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task DapperWithPrimitiveArrayInt()
+        {
+            var result = await _db.QueryAsync<UserProfileWithPrimitiveArrayInt>("SELECT 'Matt' AS name, 13 AS shoeSize, [1,2,3,4,5] AS AnArray");
+        
+            var list = result.ToList();
+        
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
+            Assert.That(list[0].AnArray, Is.Not.EqualTo(null));
+            Assert.That(list[0].AnArray[0], Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task DapperWithPrimitiveArrayString()
+        {
+            var result = await _db.QueryAsync<UserProfileWithPrimitiveArrayString>(@"SELECT 'Matt' AS name, 13 AS shoeSize, [""a"",""b"",""c""] AS AnArray");
+
+            var list = result.ToList();
+
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
+            Assert.That(list[0].AnArray, Is.Not.EqualTo(null));
+            Assert.That(list[0].AnArray[0], Is.EqualTo("a"));
+        }
+
+        [Test]
+        public async Task DapperWithArrayOfObjects()
+        {
+            var result = await _db.QueryAsync<UserProfileWithArrayObjects>(@"SELECT 'Matt' AS name, 13 AS shoeSize, [{""foo"" : ""bar1"", ""baz"" : ""qux1""}, {""foo"" : ""bar2"", ""baz"" : ""qux2""}] AS AnArray");
+
+            var list = result.ToList();
+
+            Assert.That(list.Count, Is.EqualTo(1));
+            Assert.That(list[0].Name, Is.EqualTo("Matt"));
+            Assert.That(list[0].AnArray, Is.Not.EqualTo(null));
+            Assert.That(list[0].AnArray.Count, Is.EqualTo(2));
+            Assert.That(list[0].AnArrayCsharp[1].Foo, Is.EqualTo("bar2"));
         }
     }
 
@@ -124,7 +175,29 @@ namespace CouchbaseDbConnection.Tests
         public int ShoeSize { get; set; }
     }
 
-    public class UserProfileWithNested
+    public class UserProfileWithPrimitiveArrayInt
+    {
+        public string Name { get; set; }
+        public int ShoeSize { get; set; }
+        public List<int> AnArray { get; set; }
+    }
+
+    public class UserProfileWithPrimitiveArrayString
+    {
+        public string Name { get; set; }
+        public int ShoeSize { get; set; }
+        public List<string> AnArray { get; set; }
+    }
+    
+    public class UserProfileWithArrayObjects
+    {
+        public string Name { get; set; }
+        public int ShoeSize { get; set; }
+        public List<JObject> AnArray { get; set; }
+        public List<NestedObject> AnArrayCsharp => AnArray.Select(a => a.ToObject<NestedObject>()).ToList();
+    }
+
+    public class UserProfileWithJObjectNested
     {
         public string Name { get; set; }
         public int ShoeSize { get; set; }

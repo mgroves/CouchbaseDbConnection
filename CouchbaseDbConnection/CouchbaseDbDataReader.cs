@@ -76,6 +76,19 @@ namespace CouchbaseDbConnection
         public override Type GetFieldType(int ordinal)
         {
             var get = Dynamic.InvokeGet(_dataEnumerator.Current, _names[ordinal]);
+            if (get is JArray)
+            {
+                JArray array = get;
+                var arrayType = array[0].Type;
+                if(arrayType == JTokenType.Integer)
+                    return typeof(List<int>);
+                if (arrayType == JTokenType.String)
+                    return typeof(List<string>);
+                if (arrayType == JTokenType.Boolean)
+                    return typeof(List<bool>);
+                if (arrayType == JTokenType.Object)
+                    return typeof(List<JObject>);
+            }
             var value = get?.Value;
             if (value == null)
                 return typeof(object);
@@ -140,6 +153,22 @@ namespace CouchbaseDbConnection
         {
             var obj = _dataEnumerator.Current;
             var val = Dynamic.InvokeGet(obj, _names[ordinal]);
+
+            if (val is JArray)
+            {
+                JArray array = val;
+                var arrayType = array[0].Type;
+                if (arrayType == JTokenType.Integer)
+                    return array.ToObject<List<int>>();
+                if (arrayType == JTokenType.String)
+                    return array.ToObject<List<string>>();
+                if (arrayType == JTokenType.Boolean)
+                    return array.ToObject<List<bool>>();
+                if (arrayType == JTokenType.Object)
+                    return array.ToObject<List<JObject>>();
+                return "";
+            }
+
             var value = val.Value;
             if (value == null)
             {
